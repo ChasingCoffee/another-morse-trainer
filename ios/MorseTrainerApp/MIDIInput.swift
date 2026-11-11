@@ -5,6 +5,9 @@
 //   Note 0 = straight key, Note 1 = dit paddle, Note 2 = dah paddle
 //   Velocity > 0 = pressed, Velocity = 0 (or Note Off status) = released
 //
+// This class only reports contacts; `KeyerDriver` times dit and dah (see
+// `MIDIKeyer`).
+//
 // MIDIPacket.timeStamp is in mach_absolute_time units — use this for accurate
 // key event timing (sub-millisecond), not the host's Date().
 // See CLAUDE.md §4.
@@ -32,6 +35,10 @@ public final class MIDIInput {
         public let machTimestamp: UInt64
         /// Same event as wall-clock ms since Unix epoch.
         public let timestampMs: Int64
+        /// A key-up sent for a key left held when its source went away. The key
+        /// was unplugged, not released, so a keyer should let go of everything
+        /// (`KeyerDriver.releaseAll`) rather than finish its element.
+        public var sourceLost = false
     }
 
     /// Fired from a CoreMIDI thread for every key edge.
@@ -162,7 +169,7 @@ public final class MIDIInput {
             let mach = mach_absolute_time()
             let ms = Int64(Date().timeIntervalSince1970 * 1000)
             for key in released {
-                handler(Event(key: key, isDown: false, machTimestamp: mach, timestampMs: ms))
+                handler(Event(key: key, isDown: false, machTimestamp: mach, timestampMs: ms, sourceLost: true))
             }
         }
     }
