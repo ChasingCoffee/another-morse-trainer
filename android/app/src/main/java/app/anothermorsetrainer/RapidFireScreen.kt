@@ -397,7 +397,7 @@ fun RapidFireScreen(onBack: () -> Unit, onSwitchMode: (TrainingMode) -> Unit = {
                 revealBox = revealBox,
                 typed = typed,
                 onTyped = { typed = it },
-                decoded = keyer.decodedText,
+                decoded = keyer.shownText,
                 keyPressed = keyPressed,
                 onPaddleKey = { down, ms -> keyer.touchKey(down, ms) },
                 onKey = { down ->
