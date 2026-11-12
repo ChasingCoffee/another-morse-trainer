@@ -318,6 +318,8 @@ private struct FirstFourElementStage: View {
     @State private var feedback: (String, Bool)?
     @State private var stagePassed = false
     @State private var keyReset = 0
+    /// The stage has been left: a play scheduled before that must not sound.
+    @State private var gone = false
     @FocusState private var typing: Bool
 
     private var needed: Int { phase == .copy ? FirstFour.copyStreakToPass : FirstFour.sendStreakToPass }
@@ -354,9 +356,11 @@ private struct FirstFourElementStage: View {
             }
         }
         .onAppear {
+            gone = false
             phase = progress.openingPhase(stage)
             if phase == .copy { play() }
         }
+        .onDisappear { gone = true }
     }
 
     private var explanation: String {
@@ -510,7 +514,11 @@ private struct FirstFourElementStage: View {
         } else if correct {
             feedback = ("Right — \(progress.streak) of \(needed).", true)
             if phase == .copy {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { play() }
+                // Not once the stage is left, and not over a Play the learner
+                // pressed in the meantime.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                    if !gone, !model.player.isSounding { play() }
+                }
             }
         } else {
             let shown = FirstFour.compact(heard).isEmpty ? "nothing" : "“\(heard.uppercased())”"
@@ -539,6 +547,8 @@ private struct FirstFourSceneStage: View {
     @State private var keyReset = 0
     @State private var result: (clean: Bool, passedNow: Bool)?
     @State private var playToken = 0
+    /// The stage has been left: a beat scheduled before that must not sound.
+    @State private var gone = false
 
     var body: some View {
         VStack(spacing: 16) {
@@ -573,9 +583,11 @@ private struct FirstFourSceneStage: View {
             }
         }
         .onAppear {
+            gone = false
             round = progress.cleanRuns(stage)
             startRun()
         }
+        .onDisappear { gone = true }
     }
 
     private var intro: String {
@@ -805,7 +817,7 @@ private struct FirstFourSceneStage: View {
             } else {
                 // A short pause before the activator answers, as on the air.
                 let delay: Double = scene.current?.kind == .hear || scene.current?.kind == .copy ? 0.6 : 0
-                DispatchQueue.main.asyncAfter(deadline: .now() + delay) { beginBeat() }
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) { if !gone { beginBeat() } }
             }
         case .finished:
             break
